@@ -1,0 +1,618 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full bg-slate-50">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Banquet Event Order (BEO) Generator</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts: Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    },
+                    colors: {
+                        brand: {
+                            50: '#f0fdf4',
+                            100: '#dcfce7',
+                            600: '#16a34a',
+                            700: '#15803d',
+                            800: '#166534',
+                            900: '#14532d',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        /* Custom print formatting to render clean BEO PDFs */
+        @media print {
+            body {
+                background-color: #ffffff !important;
+                color: #000000 !important;
+                font-size: 11pt !important;
+            }
+            .no-print {
+                display: none !important;
+            }
+            .print-only {
+                display: block !important;
+            }
+            .page-container {
+                box-shadow: none !important;
+                padding: 0 !important;
+                margin: 0 !important;
+                max-width: 100% !important;
+                width: 100% !important;
+            }
+            .border-print {
+                border-color: #cbd5e1 !important;
+            }
+            input, textarea, select {
+                border: none !important;
+                background: transparent !important;
+                padding: 0 !important;
+                box-shadow: none !important;
+                resize: none !important;
+                appearance: none !important;
+            }
+            /* Hide dropdown arrows in print */
+            select {
+                -webkit-appearance: none;
+                -moz-appearance: none;
+                text-indent: 1px;
+                text-overflow: '';
+            }
+            .print-break-inside-avoid {
+                page-break-inside: avoid;
+            }
+        }
+    </style>
+</head>
+<body class="font-sans text-slate-800 antialiased min-h-full flex flex-col">
+
+    <!-- Top Navigation Bar (No Print) -->
+    <header class="no-print bg-slate-900 text-white sticky top-0 z-50 shadow-md">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+            <div class="flex items-center space-x-3">
+                <div class="bg-brand-600 p-2 rounded-lg text-white">
+                    <i class="fa-solid me-1 fa-file-invoice-dollar text-xl"></i>
+                </div>
+                <div>
+                    <h1 class="font-bold text-lg leading-tight">BEO Manager Pro</h1>
+                    <p class="text-xs text-slate-400">Banquet Event Order & Quote Generator</p>
+                </div>
+            </div>
+
+            <div class="flex items-center space-x-3">
+                <button onclick="loadSampleData()" class="px-3 py-2 text-xs font-medium text-slate-300 hover:text-white hover:bg-slate-800 rounded-lg transition-colors border border-slate-700">
+                    <i class="fa-solid fa-folder-open mr-1"></i> Load Sample BEO
+                </button>
+                <button onclick="clearForm()" class="px-3 py-2 text-xs font-medium text-slate-300 hover:text-rose-400 hover:bg-slate-800 rounded-lg transition-colors border border-slate-700">
+                    <i class="fa-solid fa-rotate-left mr-1"></i> Reset
+                </button>
+                <button onclick="window.print()" class="px-4 py-2 text-xs font-semibold bg-brand-600 hover:bg-brand-700 text-white rounded-lg shadow-sm transition-all flex items-center space-x-2">
+                    <i class="fa-solid fa-file-pdf"></i>
+                    <span>Export / Print PDF</span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Workspace -->
+    <main class="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 lg:p-8 flex flex-col gap-6">
+
+        <!-- Control Ribbon (No Print) -->
+        <div class="no-print bg-white p-4 rounded-xl shadow-sm border border-slate-200 flex flex-wrap items-center justify-between gap-4">
+            <div class="flex items-center space-x-2 text-xs text-slate-500">
+                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-100 text-emerald-800">
+                    <span class="w-1.5 h-1.5 mr-1.5 rounded-full bg-emerald-500"></span> Live Calculations Active
+                </span>
+                <span>Fill in details below and click "Export / Print PDF" to create BEO document.</span>
+            </div>
+            
+            <div class="flex items-center space-x-2">
+                <span class="text-xs font-medium text-slate-600">Quick Actions:</span>
+                <button onclick="addItem('Food')" class="text-xs bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-1.5 rounded-md transition-colors">
+                    + Add Food
+                </button>
+                <button onclick="addItem('Beverage')" class="text-xs bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-1.5 rounded-md transition-colors">
+                    + Add Beverage
+                </button>
+                <button onclick="addItem('Equipment/Setup')" class="text-xs bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-1.5 rounded-md transition-colors">
+                    + Add Setup/AV
+                </button>
+            </div>
+        </div>
+
+        <!-- BEO Document Sheet (Print Target) -->
+        <div class="page-container bg-white rounded-xl shadow-lg border border-slate-200 p-6 sm:p-10 max-w-5xl mx-auto w-full transition-all">
+
+            <!-- 1. Header & Restaurant Branding -->
+            <div class="border-b-2 border-slate-900 pb-6 mb-6">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
+                    <!-- Venue Details -->
+                    <div class="space-y-2">
+                        <input type="text" id="venueName" value="Grand Royale Hotel & Event Center" 
+                               class="text-2xl sm:text-3xl font-bold text-slate-900 w-full focus:ring-1 focus:ring-brand-600 rounded px-1 -ml-1 border-transparent hover:border-slate-300 border" placeholder="Restaurant / Venue Name">
+                        
+                        <textarea id="venueContact" rows="3" 
+                                  class="text-xs text-slate-600 w-full resize-none focus:ring-1 focus:ring-brand-600 rounded px-1 -ml-1 border-transparent hover:border-slate-300 border leading-relaxed" 
+                                  placeholder="Address, Phone, Email, Website">100 Gourmet Boulevard, Suite 500
+Seattle, WA 98101
+Phone: (206) 555-0199 | Events@grandroyale.com</textarea>
+                    </div>
+
+                    <!-- BEO Metadata -->
+                    <div class="bg-slate-50 p-4 rounded-lg border border-slate-200 md:text-right space-y-2 border-print">
+                        <div class="text-xl font-bold text-brand-700 uppercase tracking-wide">Banquet Event Order</div>
+                        <div class="grid grid-cols-2 gap-2 text-xs">
+                            <span class="font-semibold text-slate-600 text-left md:text-right">BEO Number:</span>
+                            <input type="text" id="beoNumber" value="BEO-2026-0842" class="font-mono font-semibold text-slate-900 text-right focus:ring-1 focus:ring-brand-600 rounded px-1 border-transparent hover:border-slate-300 border">
+                            
+                            <span class="font-semibold text-slate-600 text-left md:text-right">Date Issued:</span>
+                            <input type="date" id="beoIssueDate" value="2026-10-20" class="text-slate-900 text-right focus:ring-1 focus:ring-brand-600 rounded px-1 border-transparent hover:border-slate-300 border">
+                            
+                            <span class="font-semibold text-slate-600 text-left md:text-right">Event Manager:</span>
+                            <input type="text" id="eventManager" value="Sarah Jenkins" class="text-slate-900 text-right focus:ring-1 focus:ring-brand-600 rounded px-1 border-transparent hover:border-slate-300 border">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 2. Guest & Event Details -->
+            <div class="mb-8">
+                <h2 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3 flex items-center">
+                    <i class="fa-solid fa-address-card mr-2 text-brand-600"></i> Event & Client Details
+                </h2>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 bg-slate-50/70 p-4 rounded-lg border border-slate-200 border-print text-sm">
+                    <!-- Client Details Column -->
+                    <div class="space-y-3">
+                        <div class="grid grid-cols-3 items-center">
+                            <label class="text-xs font-semibold text-slate-600">Client / Org:</label>
+                            <input type="text" id="guestCompany" value="Apex Global Logistics" class="col-span-2 font-medium text-slate-900 bg-white border border-slate-300 rounded px-2 py-1 text-xs focus:ring-1 focus:ring-brand-600">
+                        </div>
+                        <div class="grid grid-cols-3 items-center">
+                            <label class="text-xs font-semibold text-slate-600">Contact Name:</label>
+                            <input type="text" id="guestName" value="Michael Chang" class="col-span-2 font-medium text-slate-900 bg-white border border-slate-300 rounded px-2 py-1 text-xs focus:ring-1 focus:ring-brand-600">
+                        </div>
+                        <div class="grid grid-cols-3 items-center">
+                            <label class="text-xs font-semibold text-slate-600">Phone Number:</label>
+                            <input type="text" id="guestPhone" value="(555) 234-5678" class="col-span-2 text-slate-900 bg-white border border-slate-300 rounded px-2 py-1 text-xs focus:ring-1 focus:ring-brand-600">
+                        </div>
+                        <div class="grid grid-cols-3 items-center">
+                            <label class="text-xs font-semibold text-slate-600">Email Address:</label>
+                            <input type="email" id="guestEmail" value="m.chang@apexglobal.com" class="col-span-2 text-slate-900 bg-white border border-slate-300 rounded px-2 py-1 text-xs focus:ring-1 focus:ring-brand-600">
+                        </div>
+                    </div>
+
+                    <!-- Event Details Column -->
+                    <div class="space-y-3">
+                        <div class="grid grid-cols-3 items-center">
+                            <label class="text-xs font-semibold text-slate-600">Event Title:</label>
+                            <input type="text" id="eventName" value="Annual Executive Gala Dinner" class="col-span-2 font-bold text-slate-900 bg-white border border-slate-300 rounded px-2 py-1 text-xs focus:ring-1 focus:ring-brand-600">
+                        </div>
+                        <div class="grid grid-cols-3 items-center">
+                            <label class="text-xs font-semibold text-slate-600">Event Date:</label>
+                            <input type="date" id="eventDate" value="2026-11-14" class="col-span-2 text-slate-900 bg-white border border-slate-300 rounded px-2 py-1 text-xs focus:ring-1 focus:ring-brand-600">
+                        </div>
+                        <div class="grid grid-cols-3 items-center">
+                            <label class="text-xs font-semibold text-slate-600">Time / Schedule:</label>
+                            <div class="col-span-2 flex items-center space-x-1">
+                                <input type="text" id="startTime" value="6:00 PM" class="w-1/2 text-slate-900 bg-white border border-slate-300 rounded px-2 py-1 text-xs focus:ring-1 focus:ring-brand-600">
+                                <span class="text-xs text-slate-400">to</span>
+                                <input type="text" id="endTime" value="10:30 PM" class="w-1/2 text-slate-900 bg-white border border-slate-300 rounded px-2 py-1 text-xs focus:ring-1 focus:ring-brand-600">
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-3 items-center">
+                            <label class="text-xs font-semibold text-slate-600">Room / Area:</label>
+                            <input type="text" id="eventRoom" value="Grand Ballroom A & B" class="col-span-2 text-slate-900 bg-white border border-slate-300 rounded px-2 py-1 text-xs focus:ring-1 focus:ring-brand-600">
+                        </div>
+                        <div class="grid grid-cols-3 items-center">
+                            <label class="text-xs font-semibold text-slate-600">Guest Count:</label>
+                            <div class="col-span-2 flex items-center space-x-2">
+                                <div class="flex items-center space-x-1 w-1/2">
+                                    <span class="text-[10px] text-slate-500">Est:</span>
+                                    <input type="number" id="estGuests" value="85" onchange="calculateTotals()" class="w-full text-slate-900 bg-white border border-slate-300 rounded px-1.5 py-1 text-xs focus:ring-1 focus:ring-brand-600">
+                                </div>
+                                <div class="flex items-center space-x-1 w-1/2">
+                                    <span class="text-[10px] text-slate-500">Guar:</span>
+                                    <input type="number" id="guarGuests" value="80" onchange="calculateTotals()" class="w-full text-slate-900 bg-white border border-slate-300 rounded px-1.5 py-1 text-xs focus:ring-1 focus:ring-brand-600">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 3. Dynamic Menu & Beverage Items Table -->
+            <div class="mb-8">
+                <div class="flex items-center justify-between mb-3">
+                    <h2 class="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center">
+                        <i class="fa-solid fa-utensils mr-2 text-brand-600"></i> Menu, Beverages & Services Schedule
+                    </h2>
+                    <button onclick="addItem()" class="no-print text-xs text-brand-700 hover:text-brand-800 font-semibold flex items-center space-x-1 bg-brand-50 border border-brand-200 px-2.5 py-1 rounded-md transition-colors">
+                        <i class="fa-solid fa-plus text-[10px]"></i>
+                        <span>Add Line Item</span>
+                    </button>
+                </div>
+
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left text-xs border-collapse">
+                        <thead>
+                            <tr class="bg-slate-800 text-white font-semibold">
+                                <th class="p-2.5 rounded-tl-lg w-28">Category</th>
+                                <th class="p-2.5">Item & Description</th>
+                                <th class="p-2.5 text-center w-20">Qty</th>
+                                <th class="p-2.5 text-right w-24">Unit Price</th>
+                                <th class="p-2.5 text-center w-16">Tax?</th>
+                                <th class="p-2.5 text-right w-28">Total</th>
+                                <th class="p-2.5 text-center w-10 no-print rounded-tr-lg"></th>
+                            </tr>
+                        </thead>
+                        <tbody id="itemsContainer" class="divide-y divide-slate-200 border-b border-slate-200">
+                            <!-- Rows injected via JavaScript -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- 4. Financial Calculations & Summary -->
+            <div class="mb-8 grid grid-cols-1 md:grid-cols-12 gap-6 print-break-inside-avoid">
+                <!-- Payment Status & Terms summary column -->
+                <div class="md:col-span-6 space-y-3">
+                    <div class="bg-slate-50 p-4 rounded-lg border border-slate-200 border-print">
+                        <h3 class="text-xs font-bold text-slate-700 uppercase tracking-wide mb-2 flex items-center">
+                            <i class="fa-solid fa-credit-card mr-1.5 text-slate-500"></i> Payment Details & Schedule
+                        </h3>
+                        <div class="space-y-2 text-xs">
+                            <div class="flex justify-between items-center">
+                                <span class="text-slate-600">Deposit Requirement:</span>
+                                <span class="font-medium text-slate-900">50% upon confirmation</span>
+                            </div>
+                            <div class="flex justify-between items-center">
+                                <span class="text-slate-600">Final Balance Due:</span>
+                                <span class="font-medium text-slate-900">3 Days prior to event</span>
+                            </div>
+                            <div class="pt-2 border-t border-slate-200 flex justify-between items-center">
+                                <span class="font-semibold text-slate-700">Deposit Received:</span>
+                                <div class="flex items-center space-x-1">
+                                    <span class="text-slate-500">$</span>
+                                    <input type="number" id="depositPaid" value="1000.00" step="10" onchange="calculateTotals()" 
+                                           class="w-24 text-right font-medium text-slate-900 bg-white border border-slate-300 rounded px-1.5 py-0.5 text-xs focus:ring-1 focus:ring-brand-600">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Live Calculation Table Column -->
+                <div class="md:col-span-6 bg-slate-50 p-4 rounded-lg border border-slate-200 border-print space-y-2 text-xs">
+                    <div class="flex justify-between items-center py-1">
+                        <span class="text-slate-600">Food & Item Subtotal:</span>
+                        <span id="subtotalDisplay" class="font-mono font-semibold text-slate-900">$0.00</span>
+                    </div>
+
+                    <!-- Service Charge / Gratuity -->
+                    <div class="flex justify-between items-center py-1 border-t border-slate-200/80">
+                        <div class="flex items-center space-x-1">
+                            <span class="text-slate-600">Service Charge / Admin Fee:</span>
+                            <input type="number" id="serviceRate" value="20" step="0.5" onchange="calculateTotals()" 
+                                   class="w-12 text-center bg-white border border-slate-300 rounded px-1 py-0.5 text-xs font-semibold focus:ring-1 focus:ring-brand-600">%
+                        </div>
+                        <span id="serviceDisplay" class="font-mono text-slate-900">$0.00</span>
+                    </div>
+
+                    <!-- Sales Tax -->
+                    <div class="flex justify-between items-center py-1 border-t border-slate-200/80">
+                        <div class="flex items-center space-x-1">
+                            <span class="text-slate-600">State Sales Tax:</span>
+                            <input type="number" id="taxRate" value="10.1" step="0.1" onchange="calculateTotals()" 
+                                   class="w-14 text-center bg-white border border-slate-300 rounded px-1 py-0.5 text-xs font-semibold focus:ring-1 focus:ring-brand-600">%
+                        </div>
+                        <span id="taxDisplay" class="font-mono text-slate-900">$0.00</span>
+                    </div>
+
+                    <!-- Total Cost -->
+                    <div class="flex justify-between items-center py-2 border-t-2 border-slate-400 text-sm font-bold">
+                        <span class="text-slate-900">Grand Total Estimated:</span>
+                        <span id="grandTotalDisplay" class="font-mono text-brand-700 text-base">$0.00</span>
+                    </div>
+
+                    <!-- Less Deposit & Balance Due -->
+                    <div class="flex justify-between items-center py-1 border-t border-slate-200 text-xs">
+                        <span class="text-slate-500">Less Payments / Deposits:</span>
+                        <span id="depositDisplay" class="font-mono text-slate-600">-$0.00</span>
+                    </div>
+
+                    <div class="flex justify-between items-center py-2 bg-slate-900 text-white px-3 rounded-md font-bold mt-2">
+                        <span>BALANCE DUE:</span>
+                        <span id="balanceDueDisplay" class="font-mono text-emerald-400 text-base">$0.00</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 5. Service Notes & Special Instructions -->
+            <div class="mb-8 space-y-4 print-break-inside-avoid">
+                <h2 class="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center">
+                    <i class="fa-solid fa-clipboard-list mr-2 text-brand-600"></i> Event Setup & Service Operations
+                </h2>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <!-- Setup & Audio/Visual -->
+                    <div class="space-y-1">
+                        <label class="block text-xs font-semibold text-slate-700">
+                            <i class="fa-solid fa-chair text-slate-400 mr-1"></i> Room Layout & AV Requirements:
+                        </label>
+                        <textarea id="setupNotes" rows="3" class="w-full text-xs p-2 bg-slate-50 border border-slate-200 rounded-md focus:ring-1 focus:ring-brand-600 border-print" 
+                                  placeholder="E.g., Round tables of 8, podium at front, wireless microphone, projector standard setup.">Round tables setup for 8 guests each. White linen table covers, gold chiavari chairs. Podium with wireless mic at front left. Projector & screen requested for presentation at 7:30 PM.</textarea>
+                    </div>
+
+                    <!-- Timeline / Schedule -->
+                    <div class="space-y-1">
+                        <label class="block text-xs font-semibold text-slate-700">
+                            <i class="fa-solid fa-clock text-slate-400 mr-1"></i> Timeline & Order of Service:
+                        </label>
+                        <textarea id="timelineNotes" rows="3" class="w-full text-xs p-2 bg-slate-50 border border-slate-200 rounded-md focus:ring-1 focus:ring-brand-600 border-print" 
+                                  placeholder="E.g., 6:00 PM Cocktail hour, 7:00 PM Plated dinner service...">6:00 PM - Guest arrival & Welcome Cocktail Service
+6:45 PM - Guests seated
+7:00 PM - First course served
+7:30 PM - Speeches & Presentation
+8:00 PM - Main Entree service
+9:00 PM - Dessert & Coffee bar</textarea>
+                    </div>
+
+                    <!-- Dietary Restrictions -->
+                    <div class="space-y-1">
+                        <label class="block text-xs font-semibold text-slate-700">
+                            <i class="fa-solid fa-wheat-awn-circle-exclamation text-slate-400 mr-1"></i> Dietary Restrictions & Special Meals:
+                        </label>
+                        <textarea id="dietaryNotes" rows="3" class="w-full text-xs p-2 bg-slate-50 border border-slate-200 rounded-md focus:ring-1 focus:ring-brand-600 border-print" 
+                                  placeholder="E.g., 2 Vegan meals (Table 3), 1 Severe Peanut Allergy...">Table 2: 1 Vegan/Gluten-Free guest (Custom grilled vegetable stack requested)
+Table 5: 1 Shellfish allergy (Strict separation required)</textarea>
+                    </div>
+
+                    <!-- Bar & Beverage Notes -->
+                    <div class="space-y-1">
+                        <label class="block text-xs font-semibold text-slate-700">
+                            <i class="fa-solid fa-martini-glass-citrus text-slate-400 mr-1"></i> Bar Service Instructions:
+                        </label>
+                        <textarea id="barNotes" rows="3" class="w-full text-xs p-2 bg-slate-50 border border-slate-200 rounded-md focus:ring-1 focus:ring-brand-600 border-print" 
+                                  placeholder="E.g., Hosted bar up to $1500, then cash bar. Signature cocktails...">Hosted Premium Bar for first 2 hours.
+Signature Cocktails: Old Fashioned & French 75.
+Switch to Cash Bar starting at 8:00 PM.</textarea>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 6. Terms, Conditions & Signatures -->
+            <div class="pt-4 border-t border-slate-200 print-break-inside-avoid">
+                <div class="mb-4">
+                    <h3 class="text-[11px] font-bold text-slate-600 uppercase mb-1">Terms & Conditions</h3>
+                    <p class="text-[10px] text-slate-500 leading-normal bg-slate-50 p-2.5 rounded border border-slate-200 border-print">
+                        1. Final guest counts (Guaranteed) must be submitted 72 business hours prior to the event date. 
+                        2. All food and beverage menu prices are subject to state sales tax and standard service fees. 
+                        3. Cancellations within 7 days of event forfeit deposit. Any remaining balance is due prior to function start.
+                    </p>
+                </div>
+
+                <!-- Signature Lines -->
+                <div class="grid grid-cols-2 gap-8 pt-6">
+                    <div class="space-y-8">
+                        <div class="border-b border-slate-400 h-8 flex items-end">
+                            <span class="text-xs font-mono text-slate-400 italic">Signature Placeholder</span>
+                        </div>
+                        <div class="flex justify-between text-xs text-slate-600">
+                            <span>Client / Authorized Representative</span>
+                            <span>Date</span>
+                        </div>
+                    </div>
+
+                    <div class="space-y-8">
+                        <div class="border-b border-slate-400 h-8 flex items-end">
+                            <span class="text-xs font-mono text-slate-400 italic">Signature Placeholder</span>
+                        </div>
+                        <div class="flex justify-between text-xs text-slate-600">
+                            <span>BEO / Event Coordinator</span>
+                            <span>Date</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </main>
+
+    <!-- Application Script -->
+    <script>
+        // Sample Initial Data Structure
+        let items = [
+            { category: 'Food', name: 'Prime Beef Tenderloin (Plated)', qty: 50, price: 58.00, taxable: true },
+            { category: 'Food', name: 'Pan-Seared Atlantic Salmon', qty: 30, price: 46.00, taxable: true },
+            { category: 'Food', name: 'Artisan Artisan Cheese & Charcuterie Board', qty: 2, price: 175.00, taxable: true },
+            { category: 'Beverage', name: 'Premium Open Bar Package (3 Hours)', qty: 80, price: 32.00, taxable: true },
+            { category: 'Beverage', name: 'Champagne Toast (Per Bottle)', qty: 12, price: 45.00, taxable: true },
+            { category: 'Equipment/Setup', name: 'AV Package: Projector, Screen & Wireless Mic', qty: 1, price: 350.00, taxable: false },
+            { category: 'Other', name: 'Room Rental Fee (Grand Ballroom)', qty: 1, price: 1200.00, taxable: false }
+        ];
+
+        // Format Currency Helper
+        function formatMoney(amount) {
+            return '$' + (parseFloat(amount) || 0).toLocaleString('en-US', {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2
+            });
+        }
+
+        // Render Table Items
+        function renderItems() {
+            const container = document.getElementById('itemsContainer');
+            container.innerHTML = '';
+
+            items.forEach((item, index) => {
+                const total = (item.qty || 0) * (item.price || 0);
+                const tr = document.createElement('tr');
+                tr.className = 'hover:bg-slate-50 transition-colors';
+                
+                tr.innerHTML = `
+                    <td class="p-2">
+                        <select onchange="updateItem(${index}, 'category', this.value)" class="w-full text-xs border border-slate-300 rounded px-1.5 py-1 bg-white focus:ring-1 focus:ring-brand-600">
+                            <option value="Food" ${item.category === 'Food' ? 'selected' : ''}>Food</option>
+                            <option value="Beverage" ${item.category === 'Beverage' ? 'selected' : ''}>Beverage</option>
+                            <option value="Equipment/Setup" ${item.category === 'Equipment/Setup' ? 'selected' : ''}>Setup/AV</option>
+                            <option value="Other" ${item.category === 'Other' ? 'selected' : ''}>Other</option>
+                        </select>
+                    </td>
+                    <td class="p-2">
+                        <input type="text" value="${escapeHtml(item.name)}" onchange="updateItem(${index}, 'name', this.value)" 
+                               placeholder="Item description..." class="w-full font-medium text-xs border border-slate-300 rounded px-2 py-1 bg-white focus:ring-1 focus:ring-brand-600">
+                    </td>
+                    <td class="p-2 text-center">
+                        <input type="number" value="${item.qty}" min="1" step="1" onchange="updateItem(${index}, 'qty', parseFloat(this.value) || 0)" 
+                               class="w-16 text-center text-xs border border-slate-300 rounded px-1 py-1 bg-white focus:ring-1 focus:ring-brand-600">
+                    </td>
+                    <td class="p-2 text-right">
+                        <input type="number" value="${item.price}" min="0" step="0.5" onchange="updateItem(${index}, 'price', parseFloat(this.value) || 0)" 
+                               class="w-20 text-right text-xs border border-slate-300 rounded px-1 py-1 bg-white focus:ring-1 focus:ring-brand-600">
+                    </td>
+                    <td class="p-2 text-center">
+                        <input type="checkbox" ${item.taxable ? 'checked' : ''} onchange="updateItem(${index}, 'taxable', this.checked)" 
+                               class="h-4 w-4 text-brand-600 rounded border-slate-300 focus:ring-brand-500">
+                    </td>
+                    <td class="p-2 text-right font-mono font-semibold text-slate-800">
+                        ${formatMoney(total)}
+                    </td>
+                    <td class="p-2 text-center no-print">
+                        <button onclick="removeItem(${index})" title="Remove item" class="text-slate-400 hover:text-rose-600 p-1 rounded transition-colors">
+                            <i class="fa-solid fa-trash-can text-sm"></i>
+                        </button>
+                    </td>
+                `;
+                container.appendChild(tr);
+            });
+
+            calculateTotals();
+        }
+
+        // Add New Item Row
+        function addItem(category = 'Food') {
+            items.push({
+                category: category,
+                name: '',
+                qty: 1,
+                price: 0,
+                taxable: true
+            });
+            renderItems();
+        }
+
+        // Update Specific Item Attributes
+        function updateItem(index, key, value) {
+            items[index][key] = value;
+            renderItems();
+        }
+
+        // Remove Item Row
+        function removeItem(index) {
+            items.splice(index, 1);
+            renderItems();
+        }
+
+        // Helper to sanitize text inputs against script injections
+        function escapeHtml(str) {
+            return String(str || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+        }
+
+        // Financial Calculations Engine
+        function calculateTotals() {
+            let subtotal = 0;
+            let taxableSubtotal = 0;
+
+            items.forEach(item => {
+                const itemTotal = (item.qty || 0) * (item.price || 0);
+                subtotal += itemTotal;
+                if (item.taxable) {
+                    taxableSubtotal += itemTotal;
+                }
+            });
+
+            const serviceRate = parseFloat(document.getElementById('serviceRate').value) || 0;
+            const taxRate = parseFloat(document.getElementById('taxRate').value) || 0;
+            const depositPaid = parseFloat(document.getElementById('depositPaid').value) || 0;
+
+            // Service Fee based on full subtotal
+            const serviceCharge = subtotal * (serviceRate / 100);
+
+            // Sales Tax calculated on taxable subtotal + service charge portion
+            const taxableBasis = taxableSubtotal + (taxableSubtotal * (serviceRate / 100));
+            const salesTax = taxableBasis * (taxRate / 100);
+
+            const grandTotal = subtotal + serviceCharge + salesTax;
+            const balanceDue = grandTotal - depositPaid;
+
+            // Update DOM Displays
+            document.getElementById('subtotalDisplay').innerText = formatMoney(subtotal);
+            document.getElementById('serviceDisplay').innerText = formatMoney(serviceCharge);
+            document.getElementById('taxDisplay').innerText = formatMoney(salesTax);
+            document.getElementById('grandTotalDisplay').innerText = formatMoney(grandTotal);
+            document.getElementById('depositDisplay').innerText = '-' + formatMoney(depositPaid);
+            document.getElementById('balanceDueDisplay').innerText = formatMoney(balanceDue < 0 ? 0 : balanceDue);
+        }
+
+        // Clear Form to Blank Template
+        function clearForm() {
+            if (confirm("Are you sure you want to reset the current BEO template? Unsaved changes will be cleared.")) {
+                items = [];
+                document.getElementById('guestCompany').value = '';
+                document.getElementById('guestName').value = '';
+                document.getElementById('guestPhone').value = '';
+                document.getElementById('guestEmail').value = '';
+                document.getElementById('eventName').value = '';
+                document.getElementById('estGuests').value = 0;
+                document.getElementById('guarGuests').value = 0;
+                document.getElementById('depositPaid').value = 0;
+                document.getElementById('setupNotes').value = '';
+                document.getElementById('timelineNotes').value = '';
+                document.getElementById('dietaryNotes').value = '';
+                document.getElementById('barNotes').value = '';
+                renderItems();
+            }
+        }
+
+        // Reload Sample Data
+        function loadSampleData() {
+            items = [
+                { category: 'Food', name: 'Prime Beef Tenderloin (Plated)', qty: 50, price: 58.00, taxable: true },
+                { category: 'Food', name: 'Pan-Seared Atlantic Salmon', qty: 30, price: 46.00, taxable: true },
+                { category: 'Food', name: 'Artisan Cheese & Charcuterie Board', qty: 2, price: 175.00, taxable: true },
+                { category: 'Beverage', name: 'Premium Open Bar Package (3 Hours)', qty: 80, price: 32.00, taxable: true },
+                { category: 'Beverage', name: 'Champagne Toast (Per Bottle)', qty: 12, price: 45.00, taxable: true },
+                { category: 'Equipment/Setup', name: 'AV Package: Projector, Screen & Wireless Mic', qty: 1, price: 350.00, taxable: false },
+                { category: 'Other', name: 'Room Rental Fee (Grand Ballroom)', qty: 1, price: 1200.00, taxable: false }
+            ];
+            document.getElementById('guestCompany').value = 'Apex Global Logistics';
+            document.getElementById('guestName').value = 'Michael Chang';
+            document.getElementById('guestPhone').value = '(555) 234-5678';
+            document.getElementById('guestEmail').value = 'm.chang@apexglobal.com';
+            document.getElementById('eventName').value = 'Annual Executive Gala Dinner';
+            document.getElementById('estGuests').value = 85;
+            document.getElementById('guarGuests').value = 80;
+            document.getElementById('depositPaid').value = 1000.00;
+            renderItems();
+        }
+
+        // Initialize App on DOM Load
+        window.onload = function() {
+            renderItems();
+        };
+    </script>
+</body>
+</html>
